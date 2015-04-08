@@ -9,7 +9,6 @@
 (function() {
 	'use strict'
 	var clickerInterval,
-		isAutoLiking = false,
 		settings = null,
 		messageTemplate = null,
 		STORAGE_KEY_LIKES = 'users_cache_likes',
@@ -65,9 +64,13 @@
 			authorId,
 			count = 0;
 
+		messagesCache = usersCacheService( 'messages' );
+
+		console.log('Messages', messagesCache.length);
+
 		$.each(document.querySelectorAll('.commentContainer'), function( index, item ) {
 			authorId = item.dataset.author_id;
-			if( cache[ authorId ] ) {
+			if( cache[ authorId ] || messagesCache.indexOf( authorId ) !== -1 ) {
 				item.querySelector('.press-hate').click();
 				count++;
 				return;
@@ -90,8 +93,6 @@
 		var userId;
 
 		$(context).toggleClass('active');
-		isAutoLiking = !isAutoLiking;
-
 
 		if ( clickerInterval ) {
 			clearInterval( clickerInterval );
@@ -137,15 +138,25 @@
 
 	var sendSpamMessages = function() {
 
-		var message = '';
+		var message = '',
+			userId;
+
+		messagesCache = usersCacheService( 'messages' );
 
 		console.log('Send spam');
 
 		$('.commentContainer').each(function( index, item ) {
 			message = getSpamMessageText( item );
+			userId = item.dataset.author_id;
+
 			item.querySelector('.symp-message-text').value = message;
 			item.querySelector('.chat-from-symp-button').click();
+
+			messagesCache.push( userId );
+
 		});
+
+		usersCacheService( 'messages', messagesCache );
 
 	};
 
