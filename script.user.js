@@ -7,9 +7,15 @@
 // @grant       none
 // ==/UserScript==
 (function() {
+	'use strict'
 	var clickerInterval,
+		isAutoLiking = false,
 		settings = null,
-		messageTemplate = null;
+		messageTemplate = null,
+		STORAGE_KEY_LIKES = 'users_cache_likes',
+		STORAGE_KEY_MESSAGES = 'users_cache_messages',
+		likesCache = [],
+		messagesCache = [];
 
 	var addCss = function ( cssString ) {
 		var head = document.getElementsByTagName('head')[0];
@@ -18,6 +24,34 @@
 		newCss.type = 'text/css';
 		newCss.innerHTML = cssString;
 		head.appendChild(newCss);
+	};
+
+	var usersCacheService = function( type, value ) {
+		var index = {
+			'likes': [ STORAGE_KEY_LIKES, likesCache ],
+			'messages': [ STORAGE_KEY_MESSAGES, messagesCache ]
+		};
+
+		var key = index[ type ][ 0 ],
+			variable = index[ type ][ 1 ];
+
+		if ( value != undefined ) { //wtf?
+			window.localStorage.setItem( key, JSON.stringify( value ) );
+		} else {
+			variable = JSON.parse( window.localStorage.getItem( key ) );
+			return variable;
+		}
+
+	};
+
+	var addMetrics = function() {
+		var elem = document.createElement('script'),
+			parent;
+
+		elem.textContent = "(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){ (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o), m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m) })(window,document,'script','//www.google-analytics.com/analytics.js','ga'); ga('create', 'UA-61678043-1', 'auto'); ga('send', 'pageview');";
+
+		parent = document.getElementsByTagName('script')[0];
+		parent.parentNode.insertBefore( elem, parent );
 	};
 
 	var stopEvent = function( event ) {
@@ -53,16 +87,32 @@
 			return;
 		}
 
+		var userId;
+
 		$(context).toggleClass('active');
+		isAutoLiking = !isAutoLiking;
+
 
 		if ( clickerInterval ) {
 			clearInterval( clickerInterval );
 			clickerInterval = null;
+			usersCacheService( 'likes', likesCache );
 			return;
 		}
 
+		usersCacheService( 'likes' );
+
 		clickerInterval = setInterval(function() {
-			document.querySelector('.dating-button-sympathy').click();
+
+			id = document.querySelector('#userName').href.match(/profile\/(\d+)/)[1];
+			if ( likesCache.indexOf( id ) === -1 ) {
+				likesCache.push( id );
+				document.querySelector('.dating-button-sympathy').click();
+			} else {
+				console.log('Skip this girl');
+				document.querySelector('.dating-button-skip').click();
+			}
+
 		}, 500);
 	};
 
@@ -131,6 +181,7 @@
 		renderUi();
 		initializeHandlers();
 		addCssRules();
+		addMetrics();
 
 		console.log('Top-sluts tool initialized');
 	};
